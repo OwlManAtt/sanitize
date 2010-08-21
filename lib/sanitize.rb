@@ -157,8 +157,61 @@ class Sanitize
 
     # Delete any element that isn't in the whitelist.
     unless transform[:whitelist] || @allowed_elements[name]
-      unless @remove_all_contents || @remove_element_contents[name]
-        node.children.each { |n| node.add_previous_sibling(n) }
+      if @config[:escape_only] 
+        # I tried avoiding this by node.dup(2)ing (that copies the element
+        # without its children) and then only moving the children from the node
+        # to their new position in the tree (at the childs.each { add_blabla_sibling }
+        # part), but that didn't help performance at all. I guess it's clever
+        # about managing memory here?
+        #
+        # Regardless, :escape_only is REALLY REALLY SLOW when dealing with 'large'
+        # HTML docs - I'd define large as anything with lots and lots of children.
+        # Moving them to their new spots in the DOM is probably what makes it suck
+        # so badly. Here's what I mean:
+        #
+        #  Big HTML doc (149413 bytes) x 100
+        #                             total    single    rel
+        #    Sanitize.clean (strip)   19.025 (0.190254)     -
+        #    Sanitize.clean (prune)   11.194 (0.111939)  0.59x
+        #    Sanitize.clean (escape)  33.436 (0.334364)  1.76x
+        #
+        # Still, it's about the same as strip for sane-sized things. Perfectly
+        # fine for cleaning up forum posts and stuff.
+        childs = node.children.remove
+
+        if @config[:output] == :xhtml
+          node_text = node.to_xhtml
+        elsif @config[:output] == :html
+          node_text = node.to_html
+        end
+
+        # This is a pretty :awesome: hack. I consider it 'OK' since Nokogiri is 
+        # handling the rendering of tags and escaping of HTML entities...but 
+        # still, I am a terrible person for doing these vulgar string operations
+        # in a library that was otherwise quite elegant. 
+        if node_text.include? '><' # has a closing tag?
+          size = node.name.length + 3 # 3 for </>
+
+          # I originally tried NodeSet.before() / NodeSet.after() so they'd be
+          # added in the childs' each block but the text nodes I added 
+          # disappeared in to thin air...maybe it doesn't like adding Text objects
+          # to nodesets? I dunno.
+          node.add_previous_sibling(Nokogiri::XML::Text.new(node_text[0,node_text.length-size], node.document)) 
+          childs.each { |c| node.add_previous_sibling(c) }
+          node.add_previous_sibling(Nokogiri::XML::Text.new(node_text[-size,size], node.document)) 
+
+        else
+          # <br>, <img>, etc. 
+          # I have no idea if they can have children (well, I mean, they won't be 
+          # valid HTML if they do, but does Nokogiri clean that up or what?).
+          # So, better safe than sorry.
+          node.add_previous_sibling(Nokogiri::XML::Text.new(node_text, node.document))
+          childs.each { |c| node.add_previous_sibling(c) }
+        end
+      else
+        unless @remove_all_contents || @remove_element_contents[name]
+          node.children.each { |n| node.add_previous_sibling(n) }
+        end
       end
 
       node.unlink
