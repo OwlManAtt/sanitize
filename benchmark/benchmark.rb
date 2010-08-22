@@ -42,19 +42,19 @@ class TestLoofah < Measure
 
     if is_fragment
       measure('Loofah :strip', times) do
-        Loofah.fragment(html).scrub!(:strip).to_s
+        Loofah.scrub_fragment(html, :strip).to_s
       end
 
       measure('Loofah :prune', times) do
-        Loofah.fragment(html).scrub!(:prune).to_s
+        Loofah.scrub_fragment(html, :prune).to_s
       end
     else
       measure('Loofah :strip', times) do
-        Loofah.document(html).scrub!(:strip).to_s
+        Loofah.scrub_document(html, :strip).to_s
       end
 
       measure('Loofah :prune', times) do
-        Loofah.document(html).scrub!(:prune).to_s
+        Loofah.scrub_document(html, :prune).to_s
       end
     end
 
@@ -64,10 +64,6 @@ class TestLoofah < Measure
 
     measure('Sanitize.clean (prune)', times) do
       Sanitize.clean(html, Sanitize::Config::RELAXED.merge(:remove_contents => true))
-    end
-
-    measure('Sanitize.clean (escape)', times) do
-      Sanitize.clean(html, Sanitize::Config::RELAXED.merge(:escape_only => true))
     end
   end
 end
