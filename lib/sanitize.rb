@@ -27,6 +27,7 @@ require 'sanitize/config'
 require 'sanitize/config/restricted'
 require 'sanitize/config/basic'
 require 'sanitize/config/relaxed'
+require 'sanitize/transformers/escape.rb'
 
 class Sanitize
   attr_reader :config
