@@ -67,7 +67,7 @@ class TestLoofah < Measure
     end
 
     measure('Sanitize.clean (escape)', times) do
-      Sanitize.clean(html, Sanitize::Config::RELAXED.merge(:escape_only => true))
+      Sanitize.clean(html, Sanitize::Config::RELAXED.merge({:transformers => [Sanitize::Transformers::ESCAPE]}))
     end
   end
 end

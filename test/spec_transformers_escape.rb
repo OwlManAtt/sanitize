@@ -21,6 +21,7 @@
 # SOFTWARE.
 #++
 
+$:.unshift("#{File.expand_path(File.dirname(__FILE__))}/../lib")
 require 'bacon'
 require '../lib/sanitize.rb'
 
@@ -70,11 +71,30 @@ strings = {
     :restricted => '&lt;div&gt;<strong>Hello</strong>&lt;/div&gt; world',
     :basic      => '&lt;div&gt;<strong>Hello</strong>&lt;/div&gt; world',
     :relaxed    => '&lt;div&gt;<strong>Hello</strong>&lt;/div&gt; world',
-  }
+  },
+
+  # I made this into a transformer. Even though the transformer runs, this
+  # doesn't bypass the other filers, right? I'm not whitelisting anything explicitly...
+  :still_adds_attributes? => {
+    :html       => '<a>Click me</a>',
+    :default    => '&lt;a&gt;Click me&lt;/a&gt;',
+    :restricted => '&lt;a&gt;Click me&lt;/a&gt;',
+    :basic      => '<a rel="nofollow">Click me</a>',
+    :relaxed    => '<a>Click me</a>',
+  },
+  
+  :still_strips_attributes? => {
+    :html       => '<b id="test">Hello</b>',
+    :default    => '&lt;b id="test"&gt;Hello&lt;/b&gt;',
+    :restricted => '<b>Hello</b>',
+    :basic      => '<b>Hello</b>',
+    :relaxed    => '<b>Hello</b>',
+  },
 }
 
+options = {:transformers => [Sanitize::Transformers::ESCAPE]}
 describe 'Config::DEFAULT' do
-  before { @s = Sanitize.new({:escape_only => true}) }
+  before { @s = Sanitize.new(options) }
 
   strings.each do |name, data|
     should "clean #{name} HTML" do
@@ -84,7 +104,7 @@ describe 'Config::DEFAULT' do
 end
 
 describe 'Config::RESTRICTED' do
-  before { @s = Sanitize.new(Sanitize::Config::BASIC.merge({:escape_only => true})) }
+  before { @s = Sanitize.new(Sanitize::Config::RESTRICTED.merge(options)) }
 
   strings.each do |name, data|
     should "clean #{name} HTML" do
@@ -94,7 +114,7 @@ describe 'Config::RESTRICTED' do
 end
 
 describe 'Config::BASIC' do
-  before { @s = Sanitize.new(Sanitize::Config::BASIC.merge({:escape_only => true})) }
+  before { @s = Sanitize.new(Sanitize::Config::BASIC.merge(options)) }
 
   strings.each do |name, data|
     should "clean #{name} HTML" do
@@ -104,7 +124,7 @@ describe 'Config::BASIC' do
 end
 
 describe 'Config::RELAXED' do
-  before { @s = Sanitize.new(Sanitize::Config::RELAXED.merge({:escape_only => true})) }
+  before { @s = Sanitize.new(Sanitize::Config::RELAXED.merge(options)) }
 
   strings.each do |name, data|
     should "clean #{name} HTML" do
