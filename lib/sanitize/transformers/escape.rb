@@ -24,17 +24,13 @@
 class Sanitize
   module Transformers
     ESCAPE = lambda do |env|
-      allowed_elements = env[:config][:elements]
       format = env[:config][:output]
       node = env[:node]
 
       # No action will be taken. It's been allowed by the config or
       # a transformer that's already run. 
-      #
-      # TODO: wait shit, env doesn't pass in the whitelisted node list so
-      #       other transformers that run before us get ignored...
-      return if allowed_elements.include? env[:node_name]
-      #return nil if @whitelist_nodes.include?(node)
+      return if env[:allowed_elements][env[:node_name]]
+      return if env[:whitelist_nodes].include? node
 
       # ESCAPE is rather slow when dealing with 'large' HTML
       # docs - I'd define large as anything with lots and lots of children.
